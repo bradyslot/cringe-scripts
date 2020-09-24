@@ -1,0 +1,135 @@
+#!/bin/sh
+# nerd fonts are required for glyphs to work
+
+delim="•"
+output="$HOME/.local/share/dwmbar"
+network_dev="wlp2s0"
+cpu_temp_dir="/sys/class/hwmon/hwmon4/temp1_input"
+
+# get the overall cpu temp
+temp() {
+	sensors coretemp-isa-0000 | awk 'NR==3{gsub("+","");gsub(".0°C","");print $4}'
+}
+
+# runs an external script that reads /proc/stat and generates a temp file output
+# and averages the usage against it every time it runs
+# assumes script is in your PATH
+cpu() {
+    cpuusage
+}
+
+# get the current memory usage in mb (execution time 6ms)
+mem(){
+    free -m | \
+    awk 'NR==2{print $3}'
+}
+
+# single ping test to cloudflare dns
+link() {
+    ping -q -c 1 1.1.1.1 > /dev/null 2>&1 && echo "UP" || echo "DOWN"
+}
+
+# get the current wifi ssid (execution time 5ms)
+ssid() {
+    iw dev $network_dev info | \
+    awk 'NR==5{print $2}'
+}
+
+# get the current weather in short format (execution time 700ms - 1500ms)
+weather() {
+    curl -s 'wttr.in/3189?format=%c+%t+%p+%h' | \
+    sed -e 's/ /  /'
+}
+
+# date and time (execution time 3ms)
+datetime() {
+    date '+%I:%M%p'
+}
+
+# get the current battery percentage (execution time 2ms)
+battery() {
+    cat '/sys/class/power_supply/BAT0/capacity'
+}
+
+# get the current power state (execution time 5ms)
+power() {
+    sed '/sys/class/power_supply/AC/online' -e 's/0/IN/' -e 's/1/OUT/'
+}
+
+# get the current volume percentage (execution time 7ms)
+volume() {
+    pulsemixer --get-volume | awk '{print $1}'
+}
+
+# get the current mute state (execution time 6ms)
+mute() {
+    pulsemixer --get-mute | sed -e 's/0//' -e 's/1/M/'
+}
+
+# test takes a function argument and checks its output against the previous
+# output stored on the filesystem.
+test() {
+    filename="$1"
+    current="$($1)"
+    previous="$(cat $output/$filename 2>/dev/null)"
+
+    if [ "$current" != "$previous" ]; then
+        refr="yes"
+        echo $current > $output/$filename
+    fi
+
+    eval "${filename}_val='$current'"
+}
+
+# generate a new status bar
+genstatus() {
+    printf -v status \
+       "[ %s%s %s
+        %s %s
+        %s %s
+        %s %s
+        %s ]" \
+    "$volume_val"  "$mute_val"  "$delim" \
+    "$link_val"    "$delim" \ 
+    "$temp_val"    "$delim" \
+    "$mem_val"     "$delim" \
+    "$datetime_val"
+}
+
+# dwm prints the x root name in the bar so by using xsetroot you can have
+# custom anything print there
+drawstatus() {
+    xsetroot -name "$(echo $status | tr -d '\n')"
+}
+
+# setting i=0 evaluates all timers to true and initialises the status bar in the
+# first loop
+i=0
+while :; do
+    # update every 1 second
+    if (( $i%1 == 0 )); then
+        test mute
+        test volume
+        test datetime
+    fi
+
+    # update every 5 seconds
+    if (( $i%5 == 0 )); then
+        test temp
+        test mem
+    fi
+
+    #update every 10 seconds
+    if (( $i%10 == 0 )); then
+		test link
+    fi
+
+    if [ "$refr" = "yes" ]; then
+        genstatus
+        drawstatus
+        refr="no"
+    fi
+
+    (( i++ ))
+    sleep 1
+done

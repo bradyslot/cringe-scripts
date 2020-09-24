@@ -1,0 +1,4 @@
+#!/bin/sh
+
+echo "﬙  " | tr -d '\n'
+sensors coretemp-isa-0000 | awk 'NR==3{gsub("+","");print $4}'

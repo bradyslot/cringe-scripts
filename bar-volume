@@ -1,0 +1,4 @@
+#!/bin/sh
+
+pulsemixer --get-mute | sed -e 's/0/  /' -e 's/1/  /' | tr -d '\n'
+pulsemixer --get-volume | awk '{print $1}'

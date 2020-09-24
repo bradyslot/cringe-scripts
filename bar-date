@@ -1,0 +1,4 @@
+#!/bin/sh
+
+echo " " | tr -d '\n'
+date '+%b %d %I:%M%p'

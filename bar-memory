@@ -1,0 +1,5 @@
+#!/bin/sh
+
+echo "  " | tr -d '\n'
+free -m | awk 'NR==2{print $3}' | tr -d '\n' 
+echo "mb"
