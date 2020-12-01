@@ -1,17 +1,30 @@
 #!/bin/sh
 
-# reinstate all my dotfiles from my repo
-git clone --bare git@github.com:bradyslot/dotfiles.git $HOME/.dotfiles
+# simplify git command for working with my dotfiles
 function config {
-   /usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME $@
+  git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME $@
 }
-mkdir -p .config-backup
-config checkout
-if [ $? = 0 ]; then
-  echo "Checked out config.";
-  else
-    echo "Backing up pre-existing dot files.";
-    config checkout 2>&1 | egrep "\s+\." | awk {'print $1'} | xargs -I{} mv {} .config-backup/{}
-fi;
-config checkout
+
+# if my dotfile repo hasn't been cloned, then do that
+[[ ! -e $HOME/.dotfiles ]] && \
+  git clone --bare git@github.com:bradyslot/dotfiles.git $HOME/.dotfiles
+
+# I only care about files I've added myself
 config config status.showUntrackedFiles no
+
+# get the latest dotfiles from remote
+config fetch --all
+config reset --hard dotfiles/master
+
+# clone my forks
+[[ ! -e $HOME/src ]] && mkdir $HOME/src
+cd $HOME/src
+git clone git@github.com:bradyslot/dwm.git
+git clone git@github.com:bradyslot/dmenu.git
+git clone git@gitbug.com:bradyslot/dwmblocks.git
+
+# build and install my forks
+cd dwm; sudo make clean install; cd ..
+cd dmenu; sudo make clean install; cd ..
+cd dwmblocks; sudo make clean install; cd ..
+cd $HOME
