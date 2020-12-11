@@ -12,10 +12,6 @@ function config {
 # I only care about files I've added myself
 config config status.showUntrackedFiles no
 
-# get the latest dotfiles from remote
-config fetch --all
-config reset --hard dotfiles/master
-
 # clone my forks
 [[ ! -e $HOME/src ]] && mkdir $HOME/src
 cd $HOME/src
@@ -28,3 +24,9 @@ cd dwm; sudo make clean install; cd ..
 cd dmenu; sudo make clean install; cd ..
 cd dwmblocks; sudo make clean install; cd ..
 cd $HOME
+
+echo "Use the 'config' command in place of 'git' to manage your .dotfiles"
+echo "The following is an example of fetching the desktop branch."
+echo "config checkout desktop"
+echo "config fetch origin"
+echo "config reset --hard origin/desktop"
